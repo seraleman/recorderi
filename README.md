@@ -27,32 +27,46 @@
 
 ### Prerequisites
 
-- Flutter SDK (using FVM)
+- **FVM (Flutter Version Management)** - [Install FVM](https://fvm.app/documentation/getting-started/installation)
+- Flutter SDK (managed by FVM)
 - Xcode (for iOS)
 - Android Studio (for Android)
 
 ### Installation
 
-1. Clone the repository
+1. Install FVM if you haven't already
+
+```bash
+dart pub global activate fvm
+```
+
+2. Clone the repository
 
 ```bash
 git clone <repository-url>
 cd recordari/app/recordari
 ```
 
-2. Install dependencies
+3. Install Flutter version with FVM
+
+```bash
+fvm install
+fvm use
+```
+
+4. Install dependencies
 
 ```bash
 fvm flutter pub get
 ```
 
-3. Generate Hive adapters
+5. Generate Hive adapters
 
 ```bash
 fvm dart run build_runner build --delete-conflicting-outputs
 ```
 
-4. Run the app
+6. Run the app
 
 ```bash
 fvm flutter run
@@ -126,10 +140,6 @@ The app uses **Hive boxes** for storage:
 - `cards` - Flashcard storage
 
 Data persists automatically between app sessions.
-
-## 👥 Contributors
-
-- Sergio Alejandro León Rodríguez - [@seraleman](https://github.com/seraleman)
 
 ## 📄 License
 
