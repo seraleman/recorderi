@@ -88,7 +88,7 @@ final List<InitialCardSet> initialCardSets = [
 
   // Matemáticas Básicas (index 2 - Orange)
   InitialCardSet(
-    name: 'Matemáticas Básicas',
+    name: 'Elementos Químicos',
     color: 0xFFFF9800,
     cards: [
       InitialCard(question: 'H', answer: 'Hidrógeno'),
@@ -106,7 +106,7 @@ final List<InitialCardSet> initialCardSets = [
 
   // Elementos Químicos (index 3 - Purple)
   InitialCardSet(
-    name: 'Elementos Químicos',
+    name: 'Matemáticas Básicas',
     color: 0xFF9C27B0,
     cards: [
       InitialCard(
