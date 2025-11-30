@@ -5203,6 +5203,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------------
 flutter_lints
 path_provider
+path_provider_foundation
 path_provider_linux
 path_provider_platform_interface
 path_provider_windows
@@ -24528,7 +24529,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 path_provider_android
-path_provider_foundation
 
 Copyright 2013 The Flutter Authors
 
