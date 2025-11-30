@@ -1,10 +1,13 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:uuid/uuid.dart';
 import '../models/card_set.dart';
 import '../models/flashcard.dart';
+import '../data/initial_data.dart';
 
 class DatabaseService {
   static late Box<CardSet> _setsBox;
   static late Box<Flashcard> _cardsBox;
+  static const _uuid = Uuid();
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -16,6 +19,46 @@ class DatabaseService {
     // Open boxes
     _setsBox = await Hive.openBox<CardSet>('sets');
     _cardsBox = await Hive.openBox<Flashcard>('cards');
+
+    // Load initial data if this is the first time
+    await _loadInitialDataIfNeeded();
+  }
+
+  static Future<void> _loadInitialDataIfNeeded() async {
+    // Check if already initialized
+    final prefs = await Hive.openBox('preferences');
+    final isInitialized = prefs.get('initial_data_loaded', defaultValue: false);
+
+    if (!isInitialized) {
+      // Load initial card sets
+      for (final initialSet in initialCardSets) {
+        final setId = _uuid.v4();
+        final now = DateTime.now();
+        final cardSet = CardSet(
+          id: setId,
+          name: initialSet.name,
+          color: initialSet.color,
+          createdAt: now,
+        );
+        await saveSet(cardSet);
+
+        // Load cards for this set
+        for (final initialCard in initialSet.cards) {
+          final card = Flashcard(
+            id: _uuid.v4(),
+            setId: setId,
+            question: initialCard.question,
+            answer: initialCard.answer,
+            isLearned: false,
+            createdAt: now,
+          );
+          await saveCard(card);
+        }
+      }
+
+      // Mark as initialized
+      await prefs.put('initial_data_loaded', true);
+    }
   }
 
   // CardSet operations

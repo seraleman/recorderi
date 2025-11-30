@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/card_set_provider.dart';
 import '../providers/flashcard_provider.dart';
 import '../utils/constants.dart';
+import '../utils/responsive_layout.dart';
+import '../utils/adaptive_dialogs.dart';
 import 'card_set_screen.dart';
 import 'stats_screen.dart';
 
@@ -30,152 +32,283 @@ class HomeScreen extends ConsumerWidget {
       ),
       body:
           sets.isEmpty
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.library_books_outlined,
-                      size: 80,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: paddingLarge),
-                    Text(
-                      'No card sets yet',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleLarge?.copyWith(color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: paddingSmall),
-                    Text(
-                      'Tap + to create your first set',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
-                    ),
-                  ],
-                ),
-              )
-              : ListView.builder(
-                padding: const EdgeInsets.all(paddingMedium),
-                itemCount: sets.length,
-                itemBuilder: (context, index) {
-                  final set = sets[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: paddingMedium),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Color(set.color),
-                        child: Text(
-                          set.name[0].toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+              ? ResponsiveCenter(
+                maxWidth: MaxWidths.card,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.library_books_outlined,
+                        size: 80,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: paddingLarge),
+                      Text(
+                        'No card sets yet',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Colors.grey[600],
                         ),
                       ),
-                      title: Text(set.name),
-                      subtitle: Consumer(
-                        builder: (context, ref, _) {
-                          final cards = ref.watch(flashcardProvider(set.id));
-                          final learned =
-                              cards.where((c) => c.isLearned).length;
-                          return Text(
-                            '${cards.length} cards • $learned learned',
+                      const SizedBox(height: paddingSmall),
+                      Text(
+                        'Tap + to create your first set',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              : ResponsiveCenter(
+                maxWidth: MaxWidths.content,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header section
+                    Padding(
+                      padding: EdgeInsets.all(
+                        context.isMobile ? paddingMedium : paddingLarge,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Your Card Sets',
+                            style: Theme.of(context).textTheme.headlineMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: paddingSmall),
+                          Text(
+                            '${sets.length} ${sets.length == 1 ? 'set' : 'sets'} available',
+                            style: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Grid/List
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final columns = getResponsiveColumns(context);
+                          final spacing = getResponsiveSpacing(context);
+
+                          if (columns == 1) {
+                            // Mobile: use ListView
+                            return ListView.builder(
+                              padding: EdgeInsets.all(spacing),
+                              itemCount: sets.length,
+                              itemBuilder: (context, index) {
+                                final set = sets[index];
+                                return Card(
+                                  margin: EdgeInsets.only(bottom: spacing),
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: Color(set.color),
+                                      child: Text(
+                                        set.name[0].toUpperCase(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    title: Text(set.name),
+                                    subtitle: Consumer(
+                                      builder: (context, ref, _) {
+                                        final cards = ref.watch(
+                                          flashcardProvider(set.id),
+                                        );
+                                        final learned =
+                                            cards
+                                                .where((c) => c.isLearned)
+                                                .length;
+                                        return Text(
+                                          '${cards.length} cards • $learned learned',
+                                        );
+                                      },
+                                    ),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed:
+                                          () => _showDeleteDialog(
+                                            context,
+                                            ref,
+                                            set.id,
+                                          ),
+                                    ),
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) =>
+                                                  CardSetScreen(setId: set.id),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            );
+                          }
+
+                          // Tablet/Desktop: use GridView with max extent to prevent overflow
+                          return GridView.builder(
+                            padding: EdgeInsets.all(spacing),
+                            gridDelegate:
+                                SliverGridDelegateWithMaxCrossAxisExtent(
+                                  maxCrossAxisExtent: 400,
+                                  crossAxisSpacing: spacing,
+                                  mainAxisSpacing: spacing,
+                                  mainAxisExtent: 100,
+                                ),
+                            itemCount: sets.length,
+                            itemBuilder: (context, index) {
+                              final set = sets[index];
+                              return Card(
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) =>
+                                                CardSetScreen(setId: set.id),
+                                      ),
+                                    );
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(
+                                      paddingMedium,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        CircleAvatar(
+                                          backgroundColor: Color(set.color),
+                                          radius: 24,
+                                          child: Text(
+                                            set.name[0].toUpperCase(),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 20,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: paddingMedium),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                set.name,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                                maxLines: 1,
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Consumer(
+                                                builder: (context, ref, _) {
+                                                  final cards = ref.watch(
+                                                    flashcardProvider(set.id),
+                                                  );
+                                                  final learned =
+                                                      cards
+                                                          .where(
+                                                            (c) => c.isLearned,
+                                                          )
+                                                          .length;
+                                                  return Text(
+                                                    '${cards.length} cards · $learned learned',
+                                                    style: TextStyle(
+                                                      color: Colors.grey[600],
+                                                      fontSize: 14,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    maxLines: 1,
+                                                  );
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete),
+                                          tooltip: 'Delete set',
+                                          onPressed:
+                                              () => _showDeleteDialog(
+                                                context,
+                                                ref,
+                                                set.id,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           );
                         },
                       ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed:
-                            () => _showDeleteDialog(context, ref, set.id),
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CardSetScreen(setId: set.id),
-                          ),
-                        );
-                      },
                     ),
-                  );
-                },
+                  ],
+                ),
               ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCreateDialog(context, ref),
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: context.isMobile ? const Text('') : const Text('New Set'),
       ),
     );
   }
 
-  void _showCreateDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
-
-    showDialog(
+  Future<void> _showCreateDialog(BuildContext context, WidgetRef ref) async {
+    final result = await showAdaptiveInputDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('New Card Set'),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'Set name',
-                hintText: 'e.g., Math, History',
-              ),
-              autofocus: true,
-              onSubmitted: (value) {
-                if (value.trim().isNotEmpty) {
-                  ref.read(cardSetProvider.notifier).createSet(value.trim());
-                  Navigator.pop(context);
-                }
-              },
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  if (controller.text.trim().isNotEmpty) {
-                    ref
-                        .read(cardSetProvider.notifier)
-                        .createSet(controller.text.trim());
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text('Create'),
-              ),
-            ],
-          ),
+      title: 'New Card Set',
+      label: 'Set name',
+      hint: 'e.g., Math, History',
+      cancelText: 'Cancel',
+      confirmText: 'Create',
     );
+
+    if (result != null && result.isNotEmpty) {
+      ref.read(cardSetProvider.notifier).createSet(result);
+    }
   }
 
-  void _showDeleteDialog(BuildContext context, WidgetRef ref, String setId) {
-    showDialog(
+  Future<void> _showDeleteDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String setId,
+  ) async {
+    await showAdaptiveConfirmDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Delete Set'),
-            content: const Text(
-              'Are you sure? This will delete all cards in this set.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  ref.read(cardSetProvider.notifier).deleteSet(setId);
-                  Navigator.pop(context);
-                },
-                style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
+      title: 'Delete Set',
+      content: 'Are you sure? This will delete all cards in this set.',
+      cancelText: 'Cancel',
+      confirmText: 'Delete',
+      isDestructive: true,
+      onConfirm: () {
+        ref.read(cardSetProvider.notifier).deleteSet(setId);
+      },
     );
   }
 }

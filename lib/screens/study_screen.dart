@@ -4,6 +4,8 @@ import '../providers/flashcard_provider.dart';
 import '../services/database_service.dart';
 import '../models/flashcard.dart';
 import '../utils/constants.dart';
+import '../utils/responsive_layout.dart';
+import '../utils/adaptive_dialogs.dart';
 
 class StudyScreen extends ConsumerStatefulWidget {
   final String setId;
@@ -96,40 +98,27 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
   }
 
   void _showCompletionDialog() {
-    showDialog(
+    showAdaptiveInfoDialog(
       context: context,
-      barrierDismissible: false,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('🎉 Congratulations!'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'You\'ve completed all cards in this study session!',
-                ),
-                const SizedBox(height: paddingMedium),
-                Text(
-                  'Learned: $_correctCount cards',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              FilledButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pop(context); // Go back to CardSetScreen
-                  ref.invalidate(flashcardProvider(widget.setId));
-                },
-                child: const Text('Done'),
-              ),
-            ],
+      title: '🎉 Congratulations!',
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('You\'ve completed all cards in this study session!'),
+          const SizedBox(height: paddingMedium),
+          Text(
+            'Learned: $_correctCount cards',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-    );
+        ],
+      ),
+      buttonText: 'Done',
+    ).then((_) {
+      if (mounted) {
+        Navigator.pop(context); // Go back to CardSetScreen
+        ref.invalidate(flashcardProvider(widget.setId));
+      }
+    });
   }
 
   @override
@@ -200,9 +189,10 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
 
           // Card display
           Expanded(
-            child: Center(
+            child: ResponsiveCenter(
+              maxWidth: MaxWidths.studyCard,
               child: Padding(
-                padding: const EdgeInsets.all(paddingLarge),
+                padding: EdgeInsets.all(getResponsiveSpacing(context)),
                 child: GestureDetector(
                   onTap: _flipCard,
                   child: AnimatedSwitcher(
@@ -219,14 +209,16 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                               : Theme.of(context).cardColor,
                       child: Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(paddingLarge * 2),
+                        padding: EdgeInsets.all(
+                          context.isMobile ? paddingLarge : paddingLarge * 2,
+                        ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                               _showAnswer ? 'Answer' : 'Question',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: context.isMobile ? 14 : 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.grey[600],
                               ),
@@ -236,8 +228,8 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                               _showAnswer
                                   ? currentCard.answer
                                   : currentCard.question,
-                              style: const TextStyle(
-                                fontSize: 24,
+                              style: TextStyle(
+                                fontSize: context.isMobile ? 20 : 24,
                                 fontWeight: FontWeight.bold,
                               ),
                               textAlign: TextAlign.center,
@@ -247,7 +239,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                               Text(
                                 'Tap to reveal answer',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: context.isMobile ? 12 : 14,
                                   color: Colors.grey[500],
                                   fontStyle: FontStyle.italic,
                                 ),
@@ -265,30 +257,37 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
 
           // Action buttons (only visible after showing answer)
           if (_showAnswer)
-            Padding(
-              padding: const EdgeInsets.all(paddingLarge),
+            ResponsiveCenter(
+              maxWidth: MaxWidths.studyCard,
+              padding: EdgeInsets.all(getResponsiveSpacing(context)),
               child: Row(
                 children: [
                   Expanded(
                     child: FilledButton.icon(
                       onPressed: _markUnknown,
                       icon: const Icon(Icons.close),
-                      label: const Text('Don\'t Know'),
+                      label: Text(
+                        context.isMobile ? 'Don\'t Know' : 'Don\'t Know',
+                      ),
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.orange,
-                        padding: const EdgeInsets.all(paddingMedium),
+                        padding: EdgeInsets.all(
+                          context.isMobile ? paddingSmall : paddingMedium,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: paddingMedium),
+                  SizedBox(width: getResponsiveSpacing(context)),
                   Expanded(
                     child: FilledButton.icon(
                       onPressed: _markKnown,
                       icon: const Icon(Icons.check),
-                      label: const Text('I Know It'),
+                      label: Text(context.isMobile ? 'I Know It' : 'I Know It'),
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.green,
-                        padding: const EdgeInsets.all(paddingMedium),
+                        padding: EdgeInsets.all(
+                          context.isMobile ? paddingSmall : paddingMedium,
+                        ),
                       ),
                     ),
                   ),

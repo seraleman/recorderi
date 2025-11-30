@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/flashcard_provider.dart';
 import '../services/database_service.dart';
 import '../utils/constants.dart';
+import '../utils/responsive_layout.dart';
+import '../utils/adaptive_dialogs.dart';
 import 'study_screen.dart';
 
 class CardSetScreen extends ConsumerWidget {
@@ -62,53 +64,59 @@ class CardSetScreen extends ConsumerWidget {
                   ],
                 ),
               )
-              : ListView.builder(
-                padding: const EdgeInsets.all(paddingMedium),
-                itemCount: cards.length,
-                itemBuilder: (context, index) {
-                  final card = cards[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: paddingMedium),
-                    child: ListTile(
-                      title: Text(
-                        card.question,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+              : ResponsiveCenter(
+                maxWidth: MaxWidths.card,
+                child: ListView.builder(
+                  padding: EdgeInsets.all(getResponsiveSpacing(context)),
+                  itemCount: cards.length,
+                  itemBuilder: (context, index) {
+                    final card = cards[index];
+                    return Card(
+                      margin: EdgeInsets.only(
+                        bottom: getResponsiveSpacing(context),
                       ),
-                      subtitle: Text(
-                        card.answer,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (card.isLearned)
-                            Icon(
-                              Icons.check_circle,
-                              color: Colors.green[600],
-                              size: 20,
+                      child: ListTile(
+                        title: Text(
+                          card.question,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          card.answer,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (card.isLearned)
+                              Icon(
+                                Icons.check_circle,
+                                color: Colors.green[600],
+                                size: 20,
+                              ),
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed:
+                                  () => _showEditDialog(context, ref, card.id),
                             ),
-                          IconButton(
-                            icon: const Icon(Icons.edit),
-                            onPressed:
-                                () => _showEditDialog(context, ref, card.id),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed:
-                                () => _showDeleteDialog(context, ref, card.id),
-                          ),
-                        ],
+                            IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed:
+                                  () =>
+                                      _showDeleteDialog(context, ref, card.id),
+                            ),
+                          ],
+                        ),
+                        onTap:
+                            () => _showCardDialog(
+                              context,
+                              card.question,
+                              card.answer,
+                            ),
                       ),
-                      onTap:
-                          () => _showCardDialog(
-                            context,
-                            card.question,
-                            card.answer,
-                          ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showCreateDialog(context, ref),
@@ -118,184 +126,107 @@ class CardSetScreen extends ConsumerWidget {
   }
 
   void _showCardDialog(BuildContext context, String question, String answer) {
-    showDialog(
+    showAdaptiveInfoDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Card Details'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Question:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[700],
-                  ),
-                ),
-                const SizedBox(height: paddingSmall),
-                Text(question),
-                const SizedBox(height: paddingMedium),
-                Text(
-                  'Answer:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[700],
-                  ),
-                ),
-                const SizedBox(height: paddingSmall),
-                Text(answer),
-              ],
+      title: 'Card Details',
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Question:',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
             ),
-            actions: [
-              FilledButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              ),
-            ],
           ),
+          const SizedBox(height: paddingSmall),
+          Text(question),
+          const SizedBox(height: paddingMedium),
+          Text(
+            'Answer:',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: paddingSmall),
+          Text(answer),
+        ],
+      ),
+      buttonText: 'Close',
     );
   }
 
-  void _showCreateDialog(BuildContext context, WidgetRef ref) {
-    final questionController = TextEditingController();
-    final answerController = TextEditingController();
-
-    showDialog(
+  Future<void> _showCreateDialog(BuildContext context, WidgetRef ref) async {
+    final result = await showAdaptiveMultiInputDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('New Card'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: questionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Question',
-                    hintText: 'What is...?',
-                  ),
-                  autofocus: true,
-                ),
-                const SizedBox(height: paddingMedium),
-                TextField(
-                  controller: answerController,
-                  decoration: const InputDecoration(
-                    labelText: 'Answer',
-                    hintText: 'The answer is...',
-                  ),
-                  maxLines: 3,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () async {
-                  if (questionController.text.trim().isNotEmpty &&
-                      answerController.text.trim().isNotEmpty) {
-                    await createCard(
-                      setId,
-                      questionController.text.trim(),
-                      answerController.text.trim(),
-                    );
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ref.invalidate(flashcardProvider(setId));
-                    }
-                  }
-                },
-                child: const Text('Create'),
-              ),
-            ],
-          ),
+      title: 'New Card',
+      field1Label: 'Question',
+      field1Hint: 'What is...?',
+      field2Label: 'Answer',
+      field2Hint: 'The answer is...',
+      cancelText: 'Cancel',
+      confirmText: 'Create',
+      field2MaxLines: 3,
     );
+
+    if (result != null && context.mounted) {
+      await createCard(setId, result['field1']!, result['field2']!);
+      if (context.mounted) {
+        ref.invalidate(flashcardProvider(setId));
+      }
+    }
   }
 
-  void _showEditDialog(BuildContext context, WidgetRef ref, String cardId) {
+  Future<void> _showEditDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String cardId,
+  ) async {
     final card = DatabaseService.getCard(cardId);
     if (card == null) return;
 
-    final questionController = TextEditingController(text: card.question);
-    final answerController = TextEditingController(text: card.answer);
-
-    showDialog(
+    final result = await showAdaptiveMultiInputDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Edit Card'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: questionController,
-                  decoration: const InputDecoration(labelText: 'Question'),
-                  autofocus: true,
-                ),
-                const SizedBox(height: paddingMedium),
-                TextField(
-                  controller: answerController,
-                  decoration: const InputDecoration(labelText: 'Answer'),
-                  maxLines: 3,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () async {
-                  if (questionController.text.trim().isNotEmpty &&
-                      answerController.text.trim().isNotEmpty) {
-                    await updateCard(
-                      cardId,
-                      questionController.text.trim(),
-                      answerController.text.trim(),
-                    );
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ref.invalidate(flashcardProvider(setId));
-                    }
-                  }
-                },
-                child: const Text('Save'),
-              ),
-            ],
-          ),
+      title: 'Edit Card',
+      field1Label: 'Question',
+      field1Hint: 'What is...?',
+      field1InitialValue: card.question,
+      field2Label: 'Answer',
+      field2Hint: 'The answer is...',
+      field2InitialValue: card.answer,
+      cancelText: 'Cancel',
+      confirmText: 'Save',
+      field2MaxLines: 3,
     );
+
+    if (result != null && context.mounted) {
+      await updateCard(cardId, result['field1']!, result['field2']!);
+      if (context.mounted) {
+        ref.invalidate(flashcardProvider(setId));
+      }
+    }
   }
 
-  void _showDeleteDialog(BuildContext context, WidgetRef ref, String cardId) {
-    showDialog(
+  Future<void> _showDeleteDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String cardId,
+  ) async {
+    await showAdaptiveConfirmDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Delete Card'),
-            content: const Text('Are you sure you want to delete this card?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () async {
-                  await deleteCard(cardId);
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ref.invalidate(flashcardProvider(setId));
-                  }
-                },
-                style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
+      title: 'Delete Card',
+      content: 'Are you sure you want to delete this card?',
+      cancelText: 'Cancel',
+      confirmText: 'Delete',
+      isDestructive: true,
+      onConfirm: () async {
+        await deleteCard(cardId);
+        if (context.mounted) {
+          ref.invalidate(flashcardProvider(setId));
+        }
+      },
     );
   }
 }
